@@ -3,9 +3,6 @@ go:
 - 1.3.3
 - tip
 before_install: 
-- sudo apt-get update -qq
-- sudo apt-get install -y ruby-dev gcc
-- gem install fpm
 - go get github.com/tools/godep
 - go get github.com/axw/gocov/gocov
 - go get github.com/mattn/goveralls
@@ -15,8 +12,4 @@ before_install:
 - godep restore
 script: 
 - build/ci.sh
-- $HOME/gopath/bin/goveralls -coverprofile=profile.cov -service=travis-ci -repotoken $GOVERALLS_TOKEN
-- build/release.sh
-env: 
-  matrix: 
-    secure: K6NrIoCvu0WDkZb28QXMLrUseN+eNBlwhU4tAzTXIOYVPMFRTE/6sC8QygsZZisDWqOZKqkOJoZMmS6znUe2NFNIiXX4eztwvwx0HcRezJmcXHWuyi68auYSNNFFgTqyKRAoU9n06pxM9kD9C6G6+T5ssvMor2GOo7g0qYpkirI=
+
