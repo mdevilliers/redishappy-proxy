@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net"
+
 	"github.com/mdevilliers/redishappy/services/logger"
 	"github.com/mdevilliers/redishappy/types"
 	"github.com/mdevilliers/redishappy/util"
-	"net"
 )
 
 type ProxyFlipper struct {

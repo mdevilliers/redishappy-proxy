@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/mdevilliers/redishappy"
 	"github.com/mdevilliers/redishappy/configuration"
 	"github.com/mdevilliers/redishappy/services/logger"

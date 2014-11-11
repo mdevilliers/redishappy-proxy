@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/mdevilliers/redishappy/services/logger"
 	"log"
 	"net"
+
+	"github.com/mdevilliers/redishappy/services/logger"
 )
 
 type proxy struct {
@@ -36,7 +37,7 @@ func (p *proxy) start() {
 	// TODO : get this cnnectionf from a connection pool
 	rconn, err := net.DialTCP("tcp", nil, p.raddr)
 	if err != nil {
-		logger.Info.Print("Remote connection failed: %s", err)
+		logger.Info.Printf("Remote connection failed: %s", err)
 		return
 	}
 
