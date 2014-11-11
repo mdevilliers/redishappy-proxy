@@ -19,7 +19,7 @@ func (pf *ProxyFlipper) InitialiseRunningState(state *types.MasterDetailsCollect
 	logger.Info.Printf("InitialiseRunningState called : %s", util.String(state.Items()))
 
 	for _, md := range state.Items() {
-		go pf.startAcceptorPool(md.Name, md.externalPort, md.Ip, md.Port)
+		go pf.startAcceptorPool(md.Name, md.ExternalPort, md.Ip, md.Port)
 	}
 }
 
