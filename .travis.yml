@@ -9,7 +9,6 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/cover
 - go get code.google.com/p/go.tools/cmd/vet
 - go get code.google.com/p/go.tools/cmd/goimports
-- godep restore
 script: 
 - build/ci.sh
 
