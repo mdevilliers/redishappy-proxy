@@ -1,36 +1,49 @@
 package main
 
 import (
-
-	//	"fmt"
+	"fmt"
+	"github.com/mdevilliers/redishappy/services/logger"
 	"log"
 	"net"
 )
 
 type proxy struct {
+	identity     string
 	lconn, rconn *net.TCPConn
 	laddr, raddr *net.TCPAddr
 
 	sentBytes     uint64
 	receivedBytes uint64
 
-	// errd         bool
 	closeChannel chan bool
+}
+
+func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr) *proxy {
+	ident := fmt.Sprintf("%s:%s", laddr.String(), raddr.String())
+	return &proxy{
+		identity:     ident,
+		lconn:        conn,
+		laddr:        laddr,
+		raddr:        raddr,
+		closeChannel: make(chan bool),
+	}
 }
 
 func (p *proxy) start() {
 	defer p.lconn.Close()
+
 	//connect to remote
+	// TODO : get this cnnectionf from a connection pool
 	rconn, err := net.DialTCP("tcp", nil, p.raddr)
 	if err != nil {
-		log.Printf("Remote connection failed: %s", err)
+		logger.Info.Print("Remote connection failed: %s", err)
 		return
 	}
 
 	p.rconn = rconn
 	defer p.rconn.Close()
 
-	log.Printf("Opened %s >>> %s", p.lconn.RemoteAddr().String(), p.rconn.RemoteAddr().String())
+	logger.Info.Printf("%s : Open", p.identity)
 
 	//bidirectional copy
 	go p.pipe(p.lconn, p.rconn)
@@ -40,7 +53,7 @@ func (p *proxy) start() {
 	<-p.closeChannel
 
 	// log.Printf("Closed (%d bytes sent, %d bytes recieved)", p.sentBytes, p.receivedBytes)
-	log.Print("Channel Closed")
+	logger.Info.Printf("%s : Closed", p.identity)
 }
 
 func (p *proxy) pipe(src, dst *net.TCPConn) {
@@ -59,7 +72,7 @@ func (p *proxy) pipe(src, dst *net.TCPConn) {
 	for {
 		n, err := src.Read(buff)
 		if err != nil {
-			log.Printf("Read failed '%s'\n", err)
+			logger.Info.Printf("%s : Read failed %s", p.identity, err)
 			p.closeChannel <- true
 			return
 		}
@@ -70,10 +83,11 @@ func (p *proxy) pipe(src, dst *net.TCPConn) {
 		//write out result
 		n, err = dst.Write(b)
 		if err != nil {
-			log.Printf("Write failed '%s'\n", err)
+			logger.Info.Printf("%s : Write failed %s", p.identity, err)
 			p.closeChannel <- true
 			return
 		}
+		// this needs a lock!
 		// if islocal {
 		// 	p.sentBytes += uint64(n)
 		// } else {

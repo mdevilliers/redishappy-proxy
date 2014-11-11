@@ -2,46 +2,40 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
-	"net"
+	"github.com/mdevilliers/redishappy"
+	"github.com/mdevilliers/redishappy/configuration"
+	"github.com/mdevilliers/redishappy/services/logger"
 )
 
-var localAddr = flag.String("l", ":9999", "local address")
-var remoteAddr = flag.String("r", "localhost:80", "remote address")
+var configFile string
+var logPath string
+
+func init() {
+	flag.StringVar(&configFile, "config", "config.json", "Full path of the configuration JSON file.")
+	flag.StringVar(&logPath, "log", "log", "Folder for the logging folder.")
+}
 
 func main() {
 
 	flag.Parse()
-	fmt.Printf("Proxying from %v to %v\n", *localAddr, *remoteAddr)
+	logger.InitLogging(logPath)
 
-	laddr, err := net.ResolveTCPAddr("tcp", *localAddr)
-	panicIfError(err)
-	raddr, err := net.ResolveTCPAddr("tcp", *remoteAddr)
-	panicIfError(err)
-	listener, err := net.ListenTCP("tcp", laddr)
-	panicIfError(err)
+	config, err := configuration.LoadFromFile(configFile)
 
-	// acceptor pool
-	for {
-		conn, err := listener.AcceptTCP()
-		if err != nil {
-			fmt.Printf("Failed to accept connection '%s'\n", err)
-			continue
-		}
-
-		p := &proxy{
-			lconn:        conn,
-			laddr:        laddr,
-			raddr:        raddr,
-			closeChannel: make(chan bool),
-		}
-		go p.start()
-	}
-}
-
-func panicIfError(err error) {
 	if err != nil {
-		log.Panic(err.Error())
+		logger.Error.Panicf("Error opening config file : %s", err.Error())
 	}
+
+	sane, errors := config.GetCurrentConfiguration().SanityCheckConfiguration(&configuration.ConfigContainsRequiredSections{})
+
+	if !sane {
+		for _, errorAsStr := range errors {
+			logger.Error.Print(errorAsStr)
+		}
+
+		logger.Error.Panic("Configuration fails checks")
+	}
+
+	flipper := NewProxyFlipper()
+	redishappy.NewRedisHappyEngine(flipper, config)
 }
