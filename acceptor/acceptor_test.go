@@ -3,17 +3,19 @@ package acceptor
 import (
 	"testing"
 	"time"
+
+	"github.com/mdevilliers/redishappy-proxy/proxy"
 )
 
 func TestWillNotAcceptInvalidHostPortCombos(t *testing.T) {
 
-	_, err := NewAcceptor("rubbish", "1.1.1.1:8080")
+	_, err := NewAcceptor("rubbish", "1.1.1.1:8080", proxy.NewRegistry())
 
 	if err == nil {
 		t.Error("Should not accept invalid addresses")
 	}
 
-	_, err = NewAcceptor("1.1.1.1:8080", "rubbish")
+	_, err = NewAcceptor("1.1.1.1:8080", "rubbish", proxy.NewRegistry())
 
 	if err == nil {
 		t.Error("Should not accept invalid addresses")
@@ -22,7 +24,7 @@ func TestWillNotAcceptInvalidHostPortCombos(t *testing.T) {
 
 func TestAcceptorCanStartAndStop(t *testing.T) {
 
-	acceptor, err := NewAcceptor("localhost:9089", "localhost:9090")
+	acceptor, err := NewAcceptor("localhost:9089", "localhost:9090", proxy.NewRegistry())
 
 	if err != nil {
 		t.Error("Acceptor should not error")
@@ -48,8 +50,8 @@ func TestAcceptorCanStartAndStop(t *testing.T) {
 
 func TestUnableToStartTwoAcceptorsOnTheSameAddress(t *testing.T) {
 
-	acceptor1, _ := NewAcceptor("localhost:9089", "localhost:9090")
-	acceptor2, _ := NewAcceptor("localhost:9089", "localhost:9090")
+	acceptor1, _ := NewAcceptor("localhost:9089", "localhost:9090", proxy.NewRegistry())
+	acceptor2, _ := NewAcceptor("localhost:9089", "localhost:9090", proxy.NewRegistry())
 
 	go func() {
 		err := acceptor1.Start()
@@ -75,7 +77,7 @@ func TestUnableToStartTwoAcceptorsOnTheSameAddress(t *testing.T) {
 
 func TestUnableToStartAcceptorsTwice(t *testing.T) {
 
-	acceptor1, _ := NewAcceptor("localhost:9089", "localhost:9090")
+	acceptor1, _ := NewAcceptor("localhost:9089", "localhost:9090", proxy.NewRegistry())
 	err := acceptor1.Start()
 
 	if err != nil {

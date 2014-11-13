@@ -1,10 +1,11 @@
 package acceptor
 
 import (
-	"github.com/mdevilliers/redishappy-proxy/proxy"
-	"github.com/mdevilliers/redishappy/services/logger"
 	"net"
 	"sync"
+
+	"github.com/mdevilliers/redishappy-proxy/proxy"
+	"github.com/mdevilliers/redishappy/services/logger"
 )
 
 type Acceptor struct {
@@ -14,6 +15,7 @@ type Acceptor struct {
 	started             bool
 	quit                chan bool
 	acceptedConnections chan AcceptedConnection
+	registry            *proxy.Registry
 }
 
 type AcceptedConnection struct {
@@ -21,7 +23,7 @@ type AcceptedConnection struct {
 	err        error
 }
 
-func NewAcceptor(localAddress, remoteAddress string) (*Acceptor, error) {
+func NewAcceptor(localAddress, remoteAddress string, registry *proxy.Registry) (*Acceptor, error) {
 
 	laddr, err := net.ResolveTCPAddr("tcp", localAddress)
 
@@ -41,6 +43,7 @@ func NewAcceptor(localAddress, remoteAddress string) (*Acceptor, error) {
 		started:             false,
 		quit:                make(chan bool),
 		acceptedConnections: make(chan AcceptedConnection),
+		registry:            registry,
 	}, nil
 }
 
@@ -66,6 +69,7 @@ func (a *Acceptor) Start() error {
 	a.RLock()
 	defer a.RUnlock()
 
+	// idemnepotent start
 	if a.started {
 		return nil
 	}
@@ -97,7 +101,7 @@ func (a *Acceptor) loop() {
 				logger.Error.Printf("Error on acceptor channel : %s", accepted.err)
 
 			} else {
-				p := proxy.NewProxy(accepted.connection, a.localAddress, a.remoteAddress)
+				p := proxy.NewProxy(accepted.connection, a.localAddress, a.remoteAddress, a.registry)
 				go p.Start()
 			}
 
@@ -109,8 +113,6 @@ func (a *Acceptor) loop() {
 			//maybe a race?
 			<-a.acceptedConnections
 			quit = true
-
-			logger.Info.Print("Stopped!")
 		}
 		if quit {
 			break

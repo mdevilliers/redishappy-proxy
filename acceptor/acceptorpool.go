@@ -2,16 +2,20 @@ package acceptor
 
 import (
 	"sync"
+
+	"github.com/mdevilliers/redishappy-proxy/proxy"
 )
 
 type AcceptorPool struct {
 	sync.RWMutex
-	m map[string]*Acceptor
+	m        map[string]*Acceptor
+	registry *proxy.Registry
 }
 
 func NewAcceptorPool() *AcceptorPool {
 	return &AcceptorPool{
-		m: make(map[string]*Acceptor),
+		m:        make(map[string]*Acceptor),
+		registry: proxy.NewRegistry(),
 	}
 }
 
@@ -25,7 +29,7 @@ func (p *AcceptorPool) NewOrDefaultAcceptor(name, localAddress, remoteAddress st
 	if ok {
 		return pool, nil
 	} else {
-		pool, err := NewAcceptor(localAddress, remoteAddress)
+		pool, err := NewAcceptor(localAddress, remoteAddress, p.registry)
 
 		if err != nil {
 			return nil, err

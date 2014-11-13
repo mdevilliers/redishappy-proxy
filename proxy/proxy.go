@@ -1,36 +1,37 @@
 package proxy
 
 import (
-	"fmt"
-	"log"
+	"io"
 	"net"
 
 	"github.com/mdevilliers/redishappy/services/logger"
 )
 
 type Proxy struct {
-	identity     string
-	lconn, rconn *net.TCPConn
-	laddr, raddr *net.TCPAddr
+	connectionInfo *InternalConnectionInfo
+	lconn, rconn   *net.TCPConn
+	laddr, raddr   *net.TCPAddr
 
 	sentBytes     uint64
 	receivedBytes uint64
 
 	closeChannel chan bool
+	registry     *Registry
 }
 
-func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr) *Proxy {
-	ident := fmt.Sprintf("%s:%s", laddr.String(), raddr.String())
+func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr, registry *Registry) *Proxy {
 	return &Proxy{
-		identity:     ident,
-		lconn:        conn,
-		laddr:        laddr,
-		raddr:        raddr,
-		closeChannel: make(chan bool),
+		connectionInfo: registry.RegisterConnection(laddr.String(), raddr.String()),
+		lconn:          conn,
+		laddr:          laddr,
+		raddr:          raddr,
+		closeChannel:   make(chan bool),
+		registry:       registry,
 	}
 }
 
 func (p *Proxy) Start() {
+
 	defer p.lconn.Close()
 
 	//connect to remote
@@ -44,55 +45,45 @@ func (p *Proxy) Start() {
 	p.rconn = rconn
 	defer p.rconn.Close()
 
-	logger.Info.Printf("%s : Open", p.identity)
+	logger.Info.Printf("%s : Open", p.connectionInfo.Identity())
 
 	//bidirectional copy
-	go p.pipe(p.lconn, p.rconn)
-	go p.pipe(p.rconn, p.lconn)
+	go p.pipe(true, p.lconn, p.rconn)
+	go p.pipe(false, p.rconn, p.lconn)
 
 	//wait for close...
 	<-p.closeChannel
 
-	// log.Printf("Closed (%d bytes sent, %d bytes recieved)", p.sentBytes, p.receivedBytes)
-	logger.Info.Printf("%s : Closed", p.identity)
+	p.registry.UnRegisterConnection(p.connectionInfo.Identity())
+	logger.Info.Printf("%s : Closed", p.connectionInfo.Identity())
 }
 
-func (p *Proxy) pipe(src, dst *net.TCPConn) {
-
-	var f string
-	islocal := src == p.lconn
-
-	if islocal {
-		f = ">>> %d bytes sent"
-	} else {
-		f = "<<< %d bytes recieved"
-	}
+func (p *Proxy) pipe(islocal bool, src io.Reader, dst io.Writer) {
 
 	//directional copy (64k buffer)
 	buff := make([]byte, 0xffff)
 	for {
 		n, err := src.Read(buff)
+
 		if err != nil {
-			logger.Info.Printf("%s : Read failed %s", p.identity, err)
+			logger.Info.Printf("%s : Read failed %s", p.connectionInfo.Identity(), err)
 			p.closeChannel <- true
 			return
 		}
+
 		b := buff[:n]
-
-		log.Printf(f, n)
-
-		//write out result
 		n, err = dst.Write(b)
+
 		if err != nil {
-			logger.Info.Printf("%s : Write failed %s", p.identity, err)
+			logger.Info.Printf("%s : Write failed %s", p.connectionInfo.Identity(), err)
 			p.closeChannel <- true
 			return
 		}
-		// this needs a lock!
-		// if islocal {
-		// 	p.sentBytes += uint64(n)
-		// } else {
-		// 	p.receivedBytes += uint64(n)
-		// }
+
+		if islocal {
+			p.connectionInfo.UpdateBytesOut(uint64(n))
+		} else {
+			p.connectionInfo.UpdateBytesIn(uint64(n))
+		}
 	}
 }
