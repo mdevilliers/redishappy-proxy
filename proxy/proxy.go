@@ -1,4 +1,4 @@
-package main
+package proxy
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/mdevilliers/redishappy/services/logger"
 )
 
-type proxy struct {
+type Proxy struct {
 	identity     string
 	lconn, rconn *net.TCPConn
 	laddr, raddr *net.TCPAddr
@@ -19,9 +19,9 @@ type proxy struct {
 	closeChannel chan bool
 }
 
-func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr) *proxy {
+func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr) *Proxy {
 	ident := fmt.Sprintf("%s:%s", laddr.String(), raddr.String())
-	return &proxy{
+	return &Proxy{
 		identity:     ident,
 		lconn:        conn,
 		laddr:        laddr,
@@ -30,7 +30,7 @@ func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr) *proxy 
 	}
 }
 
-func (p *proxy) start() {
+func (p *Proxy) Start() {
 	defer p.lconn.Close()
 
 	//connect to remote
@@ -57,7 +57,7 @@ func (p *proxy) start() {
 	logger.Info.Printf("%s : Closed", p.identity)
 }
 
-func (p *proxy) pipe(src, dst *net.TCPConn) {
+func (p *Proxy) pipe(src, dst *net.TCPConn) {
 
 	var f string
 	islocal := src == p.lconn
