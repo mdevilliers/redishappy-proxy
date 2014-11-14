@@ -11,6 +11,10 @@ type ConnectionInfo struct {
 	Created, LastUpdated time.Time
 }
 
+func (ci *ConnectionInfo) Identity() string {
+	return fmt.Sprintf("%s:%s", ci.From, ci.To)
+}
+
 type InternalConnectionInfo struct {
 	from, to                      string
 	bytesIn, bytesOut             uint64
@@ -87,3 +91,9 @@ func (ci *InternalConnectionInfo) loop() {
 		}
 	}
 }
+
+type ByIdentity []*ConnectionInfo
+
+func (a ByIdentity) Len() int           { return len(a) }
+func (a ByIdentity) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByIdentity) Less(i, j int) bool { return a[i].Identity() < a[j].Identity() }
