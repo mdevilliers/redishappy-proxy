@@ -21,7 +21,7 @@ type Proxy struct {
 
 func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr, registry *Registry) *Proxy {
 	return &Proxy{
-		connectionInfo: registry.RegisterConnection(laddr.String(), raddr.String()),
+		connectionInfo: registry.RegisterConnection(conn.RemoteAddr().String(), raddr.String()),
 		lconn:          conn,
 		laddr:          laddr,
 		raddr:          raddr,

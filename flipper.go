@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mdevilliers/redishappy-proxy/acceptor"
+	"github.com/mdevilliers/redishappy-proxy/proxy"
 	"github.com/mdevilliers/redishappy/services/logger"
 	"github.com/mdevilliers/redishappy/types"
 	"github.com/mdevilliers/redishappy/util"
@@ -15,7 +16,7 @@ type ProxyFlipper struct {
 
 func NewProxyFlipper() *ProxyFlipper {
 	return &ProxyFlipper{
-		pool: acceptor.NewAcceptorPool(),
+		pool: acceptor.NewAcceptorPool(proxy.NewRegistry()),
 	}
 }
 

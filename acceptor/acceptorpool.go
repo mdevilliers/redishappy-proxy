@@ -12,10 +12,10 @@ type AcceptorPool struct {
 	registry *proxy.Registry
 }
 
-func NewAcceptorPool() *AcceptorPool {
+func NewAcceptorPool(registry *proxy.Registry) *AcceptorPool {
 	return &AcceptorPool{
 		m:        make(map[string]*Acceptor),
-		registry: proxy.NewRegistry(),
+		registry: registry,
 	}
 }
 

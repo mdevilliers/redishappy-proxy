@@ -2,11 +2,13 @@ package acceptor
 
 import (
 	"testing"
+
+	"github.com/mdevilliers/redishappy-proxy/proxy"
 )
 
 func TestBasicPoolUsage(t *testing.T) {
 
-	pool := NewAcceptorPool()
+	pool := NewAcceptorPool(proxy.NewRegistry())
 
 	acceptor, err := pool.NewOrDefaultAcceptor("test", "1.1.1.1:8080", "2.2.2.2:8080")
 
@@ -31,7 +33,7 @@ func TestBasicPoolUsage(t *testing.T) {
 
 func TestInvalidAcceptor(t *testing.T) {
 
-	pool := NewAcceptorPool()
+	pool := NewAcceptorPool(proxy.NewRegistry())
 
 	_, err := pool.NewOrDefaultAcceptor("test", "rubbish", "2.2.2.2:8080")
 
