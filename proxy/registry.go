@@ -32,3 +32,15 @@ func (r *Registry) UnRegisterConnection(identity string) {
 
 	delete(r.m, identity)
 }
+
+func (r *Registry) GetConnections() []*ConnectionInfo {
+
+	r.RLock()
+	defer r.RUnlock()
+
+	arr := make([]*ConnectionInfo, 0, len(r.m))
+	for _, value := range r.m {
+		arr = append(arr, value.Get())
+	}
+	return arr
+}
