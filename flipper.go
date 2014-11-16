@@ -43,8 +43,8 @@ func (pf *ProxyFlipper) startAcceptorPool(name string, externalport int, host st
 
 	if err != nil {
 		logger.Error.Printf("Error creating new acceptor for %s -> %s", localAddress, remoteAddress)
+	} else {
+		go acceptor.Start()
 	}
-
-	go acceptor.Start()
 
 }
