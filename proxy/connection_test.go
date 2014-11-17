@@ -1,8 +1,8 @@
 package proxy
 
 import (
+	"sync"
 	"testing"
-	"time"
 )
 
 func TestBasicUsage(t *testing.T) {
@@ -12,17 +12,21 @@ func TestBasicUsage(t *testing.T) {
 		t.Errorf("identity should be A:B not %s", connection.Identity())
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(30)
+
 	update := func() {
 		for i := 1; i <= 10; i++ {
-			go connection.UpdateBytesIn(100)
-			go connection.UpdateBytesOut(100)
+			connection.UpdateBytesIn(100)
+			connection.UpdateBytesOut(100)
+			wg.Done()
 		}
 	}
 	go update()
 	go update()
 	go update()
 
-	time.Sleep(time.Millisecond * 10)
+	wg.Wait()
 	details := connection.Get()
 
 	if details.From != "A" {
