@@ -11,12 +11,17 @@ import (
 )
 
 type ProxyFlipper struct {
-	pool *acceptor.AcceptorPool
+	pool     *acceptor.AcceptorPool
+	registry *proxy.Registry
 }
 
 func NewProxyFlipper() *ProxyFlipper {
+
+	registry := proxy.NewRegistry()
+
 	return &ProxyFlipper{
-		pool: acceptor.NewAcceptorPool(proxy.NewRegistry()),
+		pool:     acceptor.NewAcceptorPool(registry),
+		registry: registry,
 	}
 }
 
@@ -28,8 +33,24 @@ func (pf *ProxyFlipper) InitialiseRunningState(state *types.MasterDetailsCollect
 	}
 }
 
-func (*ProxyFlipper) Orchestrate(switchEvent types.MasterSwitchedEvent) {
+func (pf *ProxyFlipper) Orchestrate(switchEvent types.MasterSwitchedEvent) {
 	logger.Info.Printf("Orchestrate called : %s", util.String(switchEvent))
+
+	outgoingConnection := fmt.Sprintf("%s:%d", switchEvent.OldMasterIp, switchEvent.OldMasterPort)
+
+	filter := func(ci *proxy.ConnectionInfo) bool {
+		return ci.To == outgoingConnection || ci.From == outgoingConnection
+	}
+
+	// TODO : close existing acceptor with name
+
+	// TODO : spin up a new acceptor pool
+
+	// TODO : swap over existing connections
+	// this will get all open connections either from to to the old server
+	// there might not be many
+	pf.registry.GetConnectionsWithFilter(filter)
+
 }
 
 func (pf *ProxyFlipper) startAcceptorPool(name string, externalport int, host string, port int) {

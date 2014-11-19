@@ -39,3 +39,14 @@ func (p *AcceptorPool) NewOrDefaultAcceptor(name, localAddress, remoteAddress st
 		return pool, nil
 	}
 }
+
+func (p *AcceptorPool) RemoveExistingAcceptor(name string) {
+	p.Lock()
+	defer p.Unlock()
+
+	delete(p.m, name)
+}
+
+func (p *AcceptorPool) AtomicReplaceAcceptor(name, localAddress, remoteAddress string) {
+
+}

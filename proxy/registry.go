@@ -34,7 +34,7 @@ func (r *Registry) UnRegisterConnection(identity string) {
 	delete(r.m, identity)
 }
 
-func (r *Registry) GetConnections() []*ConnectionInfo {
+func (r *Registry) GetConnections() ConnectionInfoCollection {
 
 	r.RLock()
 	defer r.RUnlock()
@@ -46,4 +46,8 @@ func (r *Registry) GetConnections() []*ConnectionInfo {
 
 	sort.Sort(ByIdentity(arr))
 	return arr
+}
+
+func (r *Registry) GetConnectionsWithFilter(filter ConnectionInfoPredicate) ConnectionInfoCollection {
+	return r.GetConnections().Select(filter)
 }

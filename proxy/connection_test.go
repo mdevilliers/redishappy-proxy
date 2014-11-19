@@ -61,3 +61,27 @@ func TestSortByIdenity(t *testing.T) {
 	}
 
 }
+
+func TestFilterByProperty(t *testing.T) {
+
+	ab := NewConnectionInfo("A", "B").Get()
+	cd := NewConnectionInfo("C", "D").Get()
+	ef := NewConnectionInfo("E", "F").Get()
+
+	all := &ConnectionInfoCollection{ef, ab, cd}
+
+	filter := func(ci *ConnectionInfo) bool {
+		return ci.To == "B"
+	}
+
+	filtered := all.Select(filter)
+
+	if len(filtered) != 1 {
+		t.Errorf("Incorrect number returned : %d", len(filtered))
+	}
+
+	if filtered[0].Identity() != "A:B" {
+		t.Errorf("Incorrect connection returned by Identity() : %s", filtered[0].Identity())
+	}
+
+}

@@ -92,7 +92,20 @@ func (ci *InternalConnectionInfo) loop() {
 	}
 }
 
-type ByIdentity []*ConnectionInfo
+type ConnectionInfoCollection []*ConnectionInfo
+type ConnectionInfoPredicate func(*ConnectionInfo) bool
+
+func (c ConnectionInfoCollection) Select(fn ConnectionInfoPredicate) ConnectionInfoCollection {
+	var p ConnectionInfoCollection
+	for _, v := range c {
+		if fn(v) {
+			p = append(p, v)
+		}
+	}
+	return p
+}
+
+type ByIdentity ConnectionInfoCollection
 
 func (a ByIdentity) Len() int           { return len(a) }
 func (a ByIdentity) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
