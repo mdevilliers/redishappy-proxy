@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"sort"
 	"sync"
 	"testing"
 )
@@ -43,4 +44,20 @@ func TestBasicUsage(t *testing.T) {
 	if details.BytesOut != 3000 {
 		t.Errorf("Bytes out should by 3000 not %d", details.BytesOut)
 	}
+}
+
+func TestSortByIdenity(t *testing.T) {
+
+	ab := NewConnectionInfo("A", "B").Get()
+	cd := NewConnectionInfo("C", "D").Get()
+	ef := NewConnectionInfo("E", "F").Get()
+
+	all := []*ConnectionInfo{ef, ab, cd}
+
+	sort.Sort(ByIdentity(all))
+
+	if all[0].Identity() != ab.Identity() {
+		t.Error("Not sorted by Identity")
+	}
+
 }

@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"sort"
 	"sync"
 )
 
@@ -42,5 +43,7 @@ func (r *Registry) GetConnections() []*ConnectionInfo {
 	for _, value := range r.m {
 		arr = append(arr, value.Get())
 	}
+
+	sort.Sort(ByIdentity(arr))
 	return arr
 }
