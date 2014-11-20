@@ -25,28 +25,45 @@ func (p *AcceptorPool) NewOrDefaultAcceptor(name, localAddress, remoteAddress st
 	defer p.Unlock()
 
 	// if exists return existing else create a new one
-	pool, ok := p.m[name]
+	a, ok := p.m[name]
 	if ok {
-		return pool, nil
+		return a, nil
 	} else {
-		pool, err := NewAcceptor(localAddress, remoteAddress, p.registry)
+		a, err := NewAcceptor(localAddress, remoteAddress, p.registry)
 
 		if err != nil {
 			return nil, err
 		}
 
-		p.m[name] = pool
-		return pool, nil
+		p.m[name] = a
+		return a, nil
 	}
 }
 
 func (p *AcceptorPool) RemoveExistingAcceptor(name string) {
 	p.Lock()
 	defer p.Unlock()
-
 	delete(p.m, name)
 }
 
-func (p *AcceptorPool) AtomicReplaceAcceptor(name, localAddress, remoteAddress string) {
+func (p *AcceptorPool) ReplaceOrDefaultAcceptor(name, localAddress, remoteAddress string) (*Acceptor, error) {
+	p.Lock()
+	defer p.Unlock()
+
+	a, found := p.m[name]
+
+	if found {
+		go a.Stop()
+		delete(p.m, name)
+	}
+
+	b, err := NewAcceptor(localAddress, remoteAddress, p.registry)
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.m[name] = b
+	return b, nil
 
 }

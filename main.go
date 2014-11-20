@@ -37,7 +37,7 @@ func main() {
 		logger.Error.Panic("Configuration fails checks")
 	}
 
-	flipper := NewProxyFlipper()
+	flipper := NewProxyFlipper(config)
 	engine := redishappy.NewRedisHappyEngine(flipper, config)
 	engine.Serve()
 }
