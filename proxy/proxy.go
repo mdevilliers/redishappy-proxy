@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"net"
-	"time"
+	//"time"
 
 	"github.com/mdevilliers/redishappy/services/logger"
 )
@@ -63,7 +63,7 @@ func (p *Proxy) pipe(islocal bool, src *net.TCPConn, dst *net.TCPConn) {
 	//directional copy (64k buffer)
 	buff := make([]byte, 0xffff)
 	for {
-		src.SetDeadline(time.Now())
+		//	src.SetDeadline(time.Now())
 
 		n, err := src.Read(buff)
 
@@ -74,7 +74,7 @@ func (p *Proxy) pipe(islocal bool, src *net.TCPConn, dst *net.TCPConn) {
 		}
 
 		b := buff[:n]
-		dst.SetDeadline(time.Now())
+		//	dst.SetDeadline(time.Now())
 		n, err = dst.Write(b)
 
 		if err != nil {
