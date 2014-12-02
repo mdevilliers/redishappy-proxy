@@ -36,6 +36,7 @@ func (p *AcceptorPool) NewOrDefaultAcceptor(name, localAddress, remoteAddress st
 		}
 
 		p.m[name] = a
+
 		return a, nil
 	}
 }
@@ -53,8 +54,12 @@ func (p *AcceptorPool) ReplaceOrDefaultAcceptor(name, localAddress, remoteAddres
 	a, found := p.m[name]
 
 	if found {
-		go a.Stop()
-		delete(p.m, name)
+		err := a.UpdateRemoteAddress(remoteAddress)
+
+		if err != nil {
+			return nil, err
+		}
+		return a, nil
 	}
 
 	b, err := NewAcceptor(localAddress, remoteAddress, p.registry)

@@ -88,6 +88,20 @@ func (a *Acceptor) Start() error {
 	return nil
 }
 
+func (a *Acceptor) UpdateRemoteAddress(remoteAddress string) error {
+	a.Lock()
+	defer a.Unlock()
+
+	raddr, err := net.ResolveTCPAddr("tcp", remoteAddress)
+
+	if err != nil {
+		return err
+	}
+
+	a.remoteAddress = raddr
+	return nil
+}
+
 func (a *Acceptor) loop() {
 
 	for {
