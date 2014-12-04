@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/mdevilliers/redishappy-proxy/acceptor"
 	"github.com/mdevilliers/redishappy-proxy/proxy"
@@ -50,15 +51,28 @@ func (pf *ProxyFlipper) Orchestrate(switchEvent types.MasterSwitchedEvent) {
 	// spin up a new acceptor pool
 	pf.ensureCorrectAcceptorPoolIsRunning(switchEvent.Name, cluster.ExternalPort, switchEvent.NewMasterIp, switchEvent.NewMasterPort)
 
-	// TODO : swap over existing connections
-	// this will get all open connections either from to to the old server
-	// there might not be many ?
+	// swap out existing connection endpoint
+	// without dropping connections
 	oldEndpoint := fmt.Sprintf("%s:%d", switchEvent.OldMasterIp, switchEvent.OldMasterPort)
+	newEndpoint := fmt.Sprintf("%s:%d", switchEvent.NewMasterIp, switchEvent.NewMasterPort)
+
 	filter := func(ci *proxy.ConnectionInfo) bool {
 		return ci.To == oldEndpoint || ci.From == oldEndpoint
 	}
 
-	pf.registry.GetConnectionsWithFilter(filter)
+	existingconnections := pf.registry.GetConnectionsWithFilter(filter)
+
+	for _, connection := range existingconnections {
+
+		laddr, _ := net.ResolveTCPAddr("tcp", newEndpoint)
+		conn, err := net.DialTCP("tcp", nil, laddr)
+
+		if err != nil {
+			logger.Error.Printf("Remote connection failed: %s", err)
+		}
+
+		connection.SwapServerConnection(conn)
+	}
 
 }
 
