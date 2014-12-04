@@ -115,8 +115,16 @@ func (a *Acceptor) loop() {
 				logger.Error.Printf("Error on acceptor channel : %s", accepted.err)
 
 			} else {
-				p := proxy.NewProxy(accepted.connection, a.localAddress, a.remoteAddress, a.registry)
-				go p.Start()
+
+				// TODO : get this connection from a connection pool
+				conn, err := net.DialTCP("tcp", nil, a.remoteAddress)
+				if err != nil {
+					logger.Error.Printf("Remote connection failed: %s", err)
+				} else {
+					p := proxy.NewProxy(accepted.connection, conn, a.registry)
+					go p.Start()
+				}
+
 			}
 
 		case <-a.quit:

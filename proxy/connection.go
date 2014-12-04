@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -9,10 +10,15 @@ type ConnectionInfo struct {
 	From, To             string
 	BytesIn, BytesOut    uint64
 	Created, LastUpdated time.Time
+	proxy                *Proxy
 }
 
 func (ci *ConnectionInfo) Identity() string {
 	return fmt.Sprintf("%s:%s", ci.From, ci.To)
+}
+
+func (ci *ConnectionInfo) SwapServerConnection(conn *net.TCPConn) {
+	ci.proxy.SwapServerConnection(conn)
 }
 
 type InternalConnectionInfo struct {
@@ -21,6 +27,7 @@ type InternalConnectionInfo struct {
 	bytesOutUpdate, bytesInUpdate chan uint64
 	readChannel                   chan *ConnectionInfoRequest
 	created, lastUpdated          time.Time
+	proxy                         *Proxy
 }
 
 type ConnectionInfoRequest struct {
@@ -70,6 +77,10 @@ func (ci *InternalConnectionInfo) Get() *ConnectionInfo {
 	return <-request.ResponseChannel
 }
 
+func (ci *InternalConnectionInfo) RegisterProxy(proxy *Proxy) {
+	ci.proxy = proxy
+}
+
 func (ci *InternalConnectionInfo) loop() {
 	for {
 		select {
@@ -87,6 +98,7 @@ func (ci *InternalConnectionInfo) loop() {
 				BytesOut:    ci.bytesOut,
 				Created:     ci.created,
 				LastUpdated: ci.lastUpdated,
+				proxy:       ci.proxy,
 			}
 		}
 	}

@@ -36,6 +36,7 @@ func main() {
 	}
 
 	go func() {
+
 		for {
 			_, err = conn.Write([]byte(str))
 			if err != nil {
@@ -51,6 +52,7 @@ func main() {
 				os.Exit(1)
 			}
 
+			//logger.Info.Print(numberOfBytes)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()

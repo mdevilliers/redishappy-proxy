@@ -2,91 +2,96 @@ package proxy
 
 import (
 	"net"
-	//"time"
+	"sync"
 
 	"github.com/mdevilliers/redishappy/services/logger"
 )
 
 type Proxy struct {
-	connectionInfo *InternalConnectionInfo
-	lconn, rconn   *net.TCPConn
-	laddr, raddr   *net.TCPAddr
-
-	sentBytes     uint64
-	receivedBytes uint64
-
-	closeChannel chan bool
-	registry     *Registry
+	connectionInfo                      *InternalConnectionInfo
+	leftCloseChannel, rightCloseChannel chan bool
+	registry                            *Registry
+	left, right                         *Pipe
+	ownedConnection                     *net.TCPConn
+	fromConnection                      *net.TCPConn
+	sync.RWMutex
 }
 
-func NewProxy(conn *net.TCPConn, laddr *net.TCPAddr, raddr *net.TCPAddr, registry *Registry) *Proxy {
-	return &Proxy{
-		connectionInfo: registry.RegisterConnection(conn.RemoteAddr().String(), raddr.String()),
-		lconn:          conn,
-		laddr:          laddr,
-		raddr:          raddr,
-		closeChannel:   make(chan bool),
-		registry:       registry,
+func NewProxy(conn *net.TCPConn, conn2 *net.TCPConn, registry *Registry) *Proxy {
+
+	leftCloseChannel := make(chan bool)
+	rightCloseChannel := make(chan bool)
+
+	from := conn.RemoteAddr().String()
+	to := conn2.RemoteAddr().String()
+
+	connectionInfo := registry.RegisterConnection(from, to)
+
+	proxy := &Proxy{
+		connectionInfo:    connectionInfo,
+		rightCloseChannel: rightCloseChannel,
+		leftCloseChannel:  leftCloseChannel,
+		registry:          registry,
+		ownedConnection:   conn2,
+		fromConnection:    conn,
 	}
+
+	proxy.left = NewPipe(conn, proxy.ownedConnection, DirectionLeftToRight, leftCloseChannel, proxy)
+	proxy.right = NewPipe(proxy.ownedConnection, conn, DirectionRightToLeft, rightCloseChannel, proxy)
+
+	connectionInfo.RegisterProxy(proxy)
+
+	return proxy
 }
 
 func (p *Proxy) Start() {
 
-	defer p.lconn.Close()
+	go p.left.Open()
+	go p.right.Open()
 
-	//connect to remote
-	// TODO : get this cnnectionf from a connection pool
-	rconn, err := net.DialTCP("tcp", nil, p.raddr)
-	if err != nil {
-		logger.Info.Printf("Remote connection failed: %s", err)
-		return
+	logger.Info.Printf("%s : Open", p.Identity())
+
+	select {
+	case <-p.leftCloseChannel:
+		p.right.Close()
+
+	case <-p.rightCloseChannel:
+		p.left.Close()
 	}
 
-	p.rconn = rconn
-	defer p.rconn.Close()
+	p.ownedConnection.Close()
 
-	logger.Info.Printf("%s : Open", p.connectionInfo.Identity())
-
-	//bidirectional copy
-	go p.pipe(true, p.lconn, p.rconn)
-	go p.pipe(false, p.rconn, p.lconn)
-
-	//wait for close...
-	<-p.closeChannel
-
-	p.registry.UnRegisterConnection(p.connectionInfo.Identity())
-	logger.Info.Printf("%s : Closed", p.connectionInfo.Identity())
+	p.registry.UnRegisterConnection(p.Identity())
+	logger.Info.Printf("%s : Closed", p.Identity())
 }
 
-func (p *Proxy) pipe(islocal bool, src *net.TCPConn, dst *net.TCPConn) {
+func (p *Proxy) SwapServerConnection(conn *net.TCPConn) {
 
-	//directional copy (64k buffer)
-	buff := make([]byte, 0xffff)
-	for {
-		//	src.SetDeadline(time.Now())
+	p.Lock()
+	defer p.Unlock()
 
-		n, err := src.Read(buff)
+	p.left.SwapServerConnection(conn)
+	p.right.SwapServerConnection(conn)
 
-		if err != nil {
-			logger.Info.Printf("%s : Read failed %s", p.connectionInfo.Identity(), err)
-			p.closeChannel <- true
-			return
-		}
+	p.ownedConnection.Close()
+	p.ownedConnection = conn
 
-		b := buff[:n]
-		//	dst.SetDeadline(time.Now())
-		n, err = dst.Write(b)
+	p.registry.UnRegisterConnection(p.Identity())
 
-		if err != nil {
-			logger.Info.Printf("%s : Write failed %s", p.connectionInfo.Identity(), err)
-			p.closeChannel <- true
-			return
-		}
+	from := p.fromConnection.RemoteAddr().String()
+	p.connectionInfo = p.registry.RegisterConnection(from, conn.RemoteAddr().String())
+	p.connectionInfo.RegisterProxy(p)
+}
 
-		if islocal {
-			p.connectionInfo.UpdateBytesOut(uint64(n))
-		} else {
-			p.connectionInfo.UpdateBytesIn(uint64(n))
-		}
+func (p *Proxy) UpdateStatistics(direction Direction, amount uint64) {
+
+	if direction == DirectionLeftToRight {
+		p.connectionInfo.UpdateBytesOut(amount)
+	} else {
+		p.connectionInfo.UpdateBytesIn(amount)
 	}
+}
+
+func (p *Proxy) Identity() string {
+	return p.connectionInfo.Identity()
 }

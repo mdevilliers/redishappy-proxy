@@ -5,12 +5,13 @@ package main
 import (
 	"flag"
 
+	"net"
+	"time"
+
 	"github.com/mdevilliers/redishappy-proxy/acceptor"
 	"github.com/mdevilliers/redishappy-proxy/proxy"
 	"github.com/mdevilliers/redishappy/services/logger"
 	"github.com/mdevilliers/redishappy/util"
-
-	"time"
 )
 
 var left string
@@ -51,14 +52,41 @@ func main() {
 			time.Sleep(5 * time.Second)
 
 			var next string
+			var previous string
+
 			if i%2 == 0 {
 				next = right1
+				previous = right2
 			} else {
 				next = right2
+				previous = right1
 			}
 
 			logger.Info.Printf("Swapping new connection to %s", next)
 			acceptor.UpdateRemoteAddress(next)
+
+			logger.Info.Printf("Swapping existing connections to %s", next)
+
+			filter := func(ci *proxy.ConnectionInfo) bool {
+				return ci.To == previous || ci.From == previous
+			}
+
+			existingconnections := registry.GetConnectionsWithFilter(filter)
+
+			logger.Info.Printf("Existing Connections : %s", util.StringPrettify(existingconnections))
+
+			for _, connection := range existingconnections {
+
+				laddr, _ := net.ResolveTCPAddr("tcp", next)
+				conn, err := net.DialTCP("tcp", nil, laddr)
+
+				if err != nil {
+					logger.Error.Printf("Remote connection failed: %s", err)
+				}
+
+				connection.SwapServerConnection(conn)
+			}
+
 			i++
 		}
 

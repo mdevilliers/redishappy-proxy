@@ -11,6 +11,7 @@ import (
 )
 
 var address string
+var connectionCount = 0
 
 func init() {
 	flag.StringVar(&address, "server", "127.0.0.1:9998", "Server address")
@@ -35,7 +36,8 @@ func main() {
 			logger.Info.Printf("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
-
+		connectionCount++
+		logger.Info.Printf("CurrentConnections %d", connectionCount)
 		go handleRequest(conn)
 	}
 
@@ -50,9 +52,12 @@ func handleRequest(conn net.Conn) {
 		buf := make([]byte, 1024)
 
 		_, err := conn.Read(buf)
+		//logger.Info.Print(numberOfBytes)
 
 		if err != nil {
 			logger.Info.Printf("Error reading %s", err.Error())
+			connectionCount--
+			logger.Info.Printf("CurrentConnections %d", connectionCount)
 			return
 		}
 
