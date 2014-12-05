@@ -47,12 +47,10 @@ func main() {
 
 func handleRequest(conn net.Conn) {
 
+	buf := make([]byte, 4048)
 	for {
-
-		buf := make([]byte, 1024)
-
-		_, err := conn.Read(buf)
-		//logger.Info.Print(numberOfBytes)
+		n, err := conn.Read(buf)
+		logger.Info.Print(string(buf[:n]))
 
 		if err != nil {
 			logger.Info.Printf("Error reading %s", err.Error())
@@ -60,8 +58,6 @@ func handleRequest(conn net.Conn) {
 			logger.Info.Printf("CurrentConnections %d", connectionCount)
 			return
 		}
-
-		conn.Write([]byte("Message received."))
-
+		conn.Write(buf[:n])
 	}
 }
