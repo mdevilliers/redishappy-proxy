@@ -1,6 +1,10 @@
 package proxy
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mdevilliers/redishappy/util"
+)
 
 func TestBasicRegistryUsage(t *testing.T) {
 	registry := NewRegistry()
@@ -48,5 +52,37 @@ func TestFilter(t *testing.T) {
 
 	if len(results) != 2 {
 		t.Errorf("There should be 2 results. There are %d", len(results))
+	}
+}
+
+func TestStatistics(t *testing.T) {
+
+	registry := NewRegistry()
+
+	one := registry.RegisterConnection("A", "B")
+	registry.RegisterConnection("A", "C")
+	registry.RegisterConnection("A", "D")
+
+	stats := registry.GetStatistics()
+
+	if stats.TotalNumberOfConnections != 3 {
+		t.Errorf("Total number of Connections should be 3 but are %d", stats.TotalNumberOfConnections)
+	}
+
+	if stats.CurrentNumberOfConnections != 3 {
+		t.Errorf("Total number of Current Connections should be 3 but are %d", stats.CurrentNumberOfConnections)
+	}
+
+	registry.UnRegisterConnection(one.Identity())
+
+	stats = registry.GetStatistics()
+	if stats.TotalNumberOfConnections != 3 {
+		t.Errorf("Total number of Connections should be 3 but are %d", stats.TotalNumberOfConnections)
+	}
+
+	if stats.CurrentNumberOfConnections != 2 {
+		t.Errorf("%s", util.String(registry.GetConnections()))
+		t.Errorf("%d", len(registry.GetConnections()))
+		t.Errorf("Total number of Current Connections should be 2 but are %d", stats.CurrentNumberOfConnections)
 	}
 }

@@ -40,7 +40,10 @@ func main() {
 			time.Sleep(time.Second)
 
 			connections := registry.GetConnections()
+			stats := registry.GetStatistics()
+
 			logger.Info.Printf("Connections : %s", util.StringPrettify(connections))
+			logger.Info.Printf("Stats : %s", util.StringPrettify(stats))
 		}
 
 	}()

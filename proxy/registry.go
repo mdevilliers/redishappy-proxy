@@ -7,12 +7,22 @@ import (
 
 type Registry struct {
 	sync.RWMutex
-	m map[string]*InternalConnectionInfo
+	m          map[string]*InternalConnectionInfo
+	statistics *RegistryStatistics
+}
+
+type RegistryStatistics struct {
+	TotalNumberOfConnections   uint
+	CurrentNumberOfConnections uint
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
 		m: make(map[string]*InternalConnectionInfo),
+		statistics: &RegistryStatistics{
+			TotalNumberOfConnections:   0,
+			CurrentNumberOfConnections: 0,
+		},
 	}
 }
 
@@ -23,6 +33,9 @@ func (r *Registry) RegisterConnection(from string, to string) *InternalConnectio
 	info := NewConnectionInfo(from, to)
 
 	r.m[info.Identity()] = info
+
+	r.statistics.TotalNumberOfConnections++
+
 	return info
 }
 
@@ -31,7 +44,12 @@ func (r *Registry) UnRegisterConnection(identity string) {
 	r.Lock()
 	defer r.Unlock()
 
-	delete(r.m, identity)
+	connectionInfo, ok := r.m[identity]
+
+	if ok {
+		go connectionInfo.Close()
+		delete(r.m, identity)
+	}
 }
 
 func (r *Registry) GetConnections() ConnectionInfoCollection {
@@ -50,4 +68,14 @@ func (r *Registry) GetConnections() ConnectionInfoCollection {
 
 func (r *Registry) GetConnectionsWithFilter(filter ConnectionInfoPredicate) ConnectionInfoCollection {
 	return r.GetConnections().Select(filter)
+}
+
+func (r *Registry) GetStatistics() RegistryStatistics {
+	r.Lock()
+	defer r.Unlock()
+
+	return RegistryStatistics{
+		TotalNumberOfConnections:   r.statistics.TotalNumberOfConnections,
+		CurrentNumberOfConnections: uint(len(r.m)),
+	}
 }

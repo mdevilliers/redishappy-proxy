@@ -26,6 +26,7 @@ type InternalConnectionInfo struct {
 	bytesIn, bytesOut             uint64
 	bytesOutUpdate, bytesInUpdate chan uint64
 	readChannel                   chan *ConnectionInfoRequest
+	closeChannel                  chan bool
 	created, lastUpdated          time.Time
 	proxy                         *Proxy
 }
@@ -49,6 +50,7 @@ func NewConnectionInfo(from string, to string) *InternalConnectionInfo {
 		bytesInUpdate:  make(chan uint64, UpdateBufferSize),
 		bytesOutUpdate: make(chan uint64, UpdateBufferSize),
 		readChannel:    make(chan *ConnectionInfoRequest),
+		closeChannel:   make(chan bool),
 		created:        now,
 		lastUpdated:    now,
 	}
@@ -81,6 +83,10 @@ func (ci *InternalConnectionInfo) RegisterProxy(proxy *Proxy) {
 	ci.proxy = proxy
 }
 
+func (ci *InternalConnectionInfo) Close() {
+	ci.closeChannel <- true
+}
+
 func (ci *InternalConnectionInfo) loop() {
 	for {
 		select {
@@ -100,6 +106,12 @@ func (ci *InternalConnectionInfo) loop() {
 				LastUpdated: ci.lastUpdated,
 				proxy:       ci.proxy,
 			}
+		case <-ci.closeChannel:
+			close(ci.readChannel)
+			close(ci.bytesInUpdate)
+			close(ci.bytesOutUpdate)
+			close(ci.closeChannel)
+			return
 		}
 	}
 }
