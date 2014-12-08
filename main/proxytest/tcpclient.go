@@ -14,6 +14,7 @@ import (
 )
 
 var server string
+var wg sync.WaitGroup
 
 func init() {
 	flag.StringVar(&server, "server", "127.0.0.1:9999", "Server address")
@@ -25,7 +26,6 @@ func main() {
 	rand.Seed(time.Now().Unix())
 	clients := rand.Intn(64)
 
-	var wg sync.WaitGroup
 	wg.Add(clients)
 
 	for i := 0; i < clients; i++ {

@@ -76,11 +76,7 @@ func (p *Proxy) SwapServerConnection(conn *net.TCPConn) {
 	p.ownedConnection.Close()
 	p.ownedConnection = conn
 
-	p.registry.UnRegisterConnection(p.Identity())
-
-	from := p.fromConnection.RemoteAddr().String()
-	p.connectionInfo = p.registry.RegisterConnection(from, conn.RemoteAddr().String())
-	p.connectionInfo.RegisterProxy(p)
+	p.registry.UpdateExistingConnection(p.connectionInfo.Identity(), conn.RemoteAddr().String())
 }
 
 func (p *Proxy) UpdateStatistics(direction Direction, amount uint64) {

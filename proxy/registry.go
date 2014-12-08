@@ -26,7 +26,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (r *Registry) RegisterConnection(from string, to string) *InternalConnectionInfo {
+func (r *Registry) RegisterConnection(from, to string) *InternalConnectionInfo {
 
 	r.Lock()
 	defer r.Unlock()
@@ -37,6 +37,21 @@ func (r *Registry) RegisterConnection(from string, to string) *InternalConnectio
 	r.statistics.TotalNumberOfConnections++
 
 	return info
+}
+
+func (r *Registry) UpdateExistingConnection(identity, to string) {
+
+	r.Lock()
+	defer r.Unlock()
+
+	connectionInfo, ok := r.m[identity]
+
+	if ok {
+		connectionInfo.to = to
+		newIdentity := connectionInfo.Identity()
+		delete(r.m, identity)
+		r.m[newIdentity] = connectionInfo
+	}
 }
 
 func (r *Registry) UnRegisterConnection(identity string) {

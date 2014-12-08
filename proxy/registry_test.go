@@ -1,10 +1,6 @@
 package proxy
 
-import (
-	"testing"
-
-	"github.com/mdevilliers/redishappy/util"
-)
+import "testing"
 
 func TestBasicRegistryUsage(t *testing.T) {
 	registry := NewRegistry()
@@ -81,8 +77,26 @@ func TestStatistics(t *testing.T) {
 	}
 
 	if stats.CurrentNumberOfConnections != 2 {
-		t.Errorf("%s", util.String(registry.GetConnections()))
-		t.Errorf("%d", len(registry.GetConnections()))
 		t.Errorf("Total number of Current Connections should be 2 but are %d", stats.CurrentNumberOfConnections)
+	}
+}
+
+func TestUpdatingConnectionInRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	one := registry.RegisterConnection("A", "B")
+
+	registry.UpdateExistingConnection(one.Identity(), "C")
+
+	if one.to != "C" {
+
+		t.Errorf("Existing connection should be pointing to 'C' not %s", one.to)
+	}
+
+	registry.UpdateExistingConnection(one.Identity(), "D")
+
+	if one.to != "D" {
+
+		t.Errorf("Existing connection should be pointing to 'D' not %s", one.to)
 	}
 }
