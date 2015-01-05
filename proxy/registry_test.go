@@ -5,7 +5,7 @@ import "testing"
 func TestBasicRegistryUsage(t *testing.T) {
 	registry := NewRegistry()
 
-	registry.RegisterConnection("A", "B")
+	registry.RegisterConnection("A", "B", &Proxy{})
 
 	connections := registry.GetConnections()
 
@@ -26,9 +26,9 @@ func TestBasicRegistryUsage(t *testing.T) {
 func TestFilter(t *testing.T) {
 
 	registry := NewRegistry()
-	registry.RegisterConnection("A", "B")
-	registry.RegisterConnection("A", "C")
-	registry.RegisterConnection("A", "D")
+	registry.RegisterConnection("A", "B", &Proxy{})
+	registry.RegisterConnection("A", "C", &Proxy{})
+	registry.RegisterConnection("A", "D", &Proxy{})
 
 	filter := func(ci *ConnectionInfo) bool {
 		return ci.To == "B"
@@ -55,9 +55,9 @@ func TestStatistics(t *testing.T) {
 
 	registry := NewRegistry()
 
-	one := registry.RegisterConnection("A", "B")
-	registry.RegisterConnection("A", "C")
-	registry.RegisterConnection("A", "D")
+	one := registry.RegisterConnection("A", "B", &Proxy{})
+	registry.RegisterConnection("A", "C", &Proxy{})
+	registry.RegisterConnection("A", "D", &Proxy{})
 
 	stats := registry.GetStatistics()
 
@@ -84,7 +84,7 @@ func TestStatistics(t *testing.T) {
 func TestUpdatingConnectionInRegistry(t *testing.T) {
 	registry := NewRegistry()
 
-	one := registry.RegisterConnection("A", "B")
+	one := registry.RegisterConnection("A", "B", &Proxy{})
 
 	registry.UpdateExistingConnection(one.Identity(), "C")
 

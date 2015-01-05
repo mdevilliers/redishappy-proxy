@@ -39,7 +39,7 @@ const (
 	UpdateBufferSize = 5
 )
 
-func NewConnectionInfo(from string, to string) *InternalConnectionInfo {
+func NewConnectionInfo(from string, to string, proxy *Proxy) *InternalConnectionInfo {
 	now := time.Now().UTC()
 
 	info := &InternalConnectionInfo{
@@ -53,6 +53,7 @@ func NewConnectionInfo(from string, to string) *InternalConnectionInfo {
 		closeChannel:   make(chan bool),
 		created:        now,
 		lastUpdated:    now,
+		proxy:          proxy,
 	}
 	go info.loop()
 	return info
@@ -77,10 +78,6 @@ func (ci *InternalConnectionInfo) Get() *ConnectionInfo {
 	}
 	ci.readChannel <- request
 	return <-request.ResponseChannel
-}
-
-func (ci *InternalConnectionInfo) RegisterProxy(proxy *Proxy) {
-	ci.proxy = proxy
 }
 
 func (ci *InternalConnectionInfo) Close() {

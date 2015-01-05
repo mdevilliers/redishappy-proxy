@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -8,13 +9,14 @@ import (
 )
 
 type Proxy struct {
+	sync.RWMutex
 	connectionInfo                      *InternalConnectionInfo
 	leftCloseChannel, rightCloseChannel chan bool
 	registry                            *Registry
 	left, right                         *Pipe
 	ownedConnection                     *net.TCPConn
 	fromConnection                      *net.TCPConn
-	sync.RWMutex
+	started                             bool
 }
 
 func NewProxy(conn *net.TCPConn, conn2 *net.TCPConn, registry *Registry) *Proxy {
@@ -25,29 +27,37 @@ func NewProxy(conn *net.TCPConn, conn2 *net.TCPConn, registry *Registry) *Proxy 
 	from := conn.RemoteAddr().String()
 	to := conn2.RemoteAddr().String()
 
-	connectionInfo := registry.RegisterConnection(from, to)
-
 	proxy := &Proxy{
-		connectionInfo:    connectionInfo,
 		rightCloseChannel: rightCloseChannel,
 		leftCloseChannel:  leftCloseChannel,
 		registry:          registry,
 		ownedConnection:   conn2,
 		fromConnection:    conn,
+		started:           false,
 	}
 
 	proxy.left = NewPipe(conn, proxy.ownedConnection, DirectionLeftToRight, leftCloseChannel, proxy)
 	proxy.right = NewPipe(proxy.ownedConnection, conn, DirectionRightToLeft, rightCloseChannel, proxy)
-
-	connectionInfo.RegisterProxy(proxy)
+	proxy.connectionInfo = registry.RegisterConnection(from, to, proxy)
 
 	return proxy
 }
 
 func (p *Proxy) Start() {
 
+	p.Lock()
+
+	if p.started {
+		message := fmt.Sprintf("Proxy already started :%s", p.Identity())
+		logger.Error.Printf(message)
+		panic(message)
+	}
+
 	go p.left.Open()
 	go p.right.Open()
+
+	p.started = true
+	defer p.Unlock()
 
 	logger.Info.Printf("%s : Open", p.Identity())
 

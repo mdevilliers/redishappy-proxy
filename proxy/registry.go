@@ -26,11 +26,11 @@ func NewRegistry() *Registry {
 	}
 }
 
-func (r *Registry) RegisterConnection(from, to string) *InternalConnectionInfo {
+func (r *Registry) RegisterConnection(from, to string, proxy *Proxy) *InternalConnectionInfo {
 
 	r.Lock()
 	defer r.Unlock()
-	info := NewConnectionInfo(from, to)
+	info := NewConnectionInfo(from, to, proxy)
 
 	r.m[info.Identity()] = info
 

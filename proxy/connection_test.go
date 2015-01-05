@@ -7,7 +7,8 @@ import (
 )
 
 func TestBasicUsage(t *testing.T) {
-	connection := NewConnectionInfo("A", "B")
+	proxy := &Proxy{}
+	connection := NewConnectionInfo("A", "B", proxy)
 
 	if connection.Identity() != "A:B" {
 		t.Errorf("identity should be A:B not %s", connection.Identity())
@@ -48,9 +49,9 @@ func TestBasicUsage(t *testing.T) {
 
 func TestSortByIdenity(t *testing.T) {
 
-	ab := NewConnectionInfo("A", "B").Get()
-	cd := NewConnectionInfo("C", "D").Get()
-	ef := NewConnectionInfo("E", "F").Get()
+	ab := NewConnectionInfo("A", "B", &Proxy{}).Get()
+	cd := NewConnectionInfo("C", "D", &Proxy{}).Get()
+	ef := NewConnectionInfo("E", "F", &Proxy{}).Get()
 
 	all := []*ConnectionInfo{ef, ab, cd}
 
@@ -64,9 +65,9 @@ func TestSortByIdenity(t *testing.T) {
 
 func TestFilterByProperty(t *testing.T) {
 
-	ab := NewConnectionInfo("A", "B").Get()
-	cd := NewConnectionInfo("C", "D").Get()
-	ef := NewConnectionInfo("E", "F").Get()
+	ab := NewConnectionInfo("A", "B", &Proxy{}).Get()
+	cd := NewConnectionInfo("C", "D", &Proxy{}).Get()
+	ef := NewConnectionInfo("E", "F", &Proxy{}).Get()
 
 	all := &ConnectionInfoCollection{ef, ab, cd}
 
