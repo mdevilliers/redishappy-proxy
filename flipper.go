@@ -83,7 +83,7 @@ func (pf *ProxyFlipper) ensureCorrectAcceptorPoolIsRunning(name string, external
 
 	logger.Info.Printf("Proxying from %v to %v\n", localAddress, remoteAddress)
 
-	acceptor, err := pf.pool.ReplaceOrDefaultAcceptor(name, localAddress, remoteAddress)
+	acceptor, err := pf.pool.NewOrDefaultAcceptor(name, localAddress, remoteAddress)
 
 	if err != nil {
 		logger.Error.Printf("Error creating new acceptor for %s -> %s", localAddress, remoteAddress)

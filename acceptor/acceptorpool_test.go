@@ -71,7 +71,7 @@ func TestReplaceAcceptor(t *testing.T) {
 		t.Error(" pool.NewOrDefaultAcceptor should not error")
 	}
 
-	_, err = pool.ReplaceOrDefaultAcceptor(name, "3.3.3.3:8080", "4.4.4.4:8080")
+	_, err = pool.NewOrDefaultAcceptor(name, "3.3.3.3:8080", "4.4.4.4:8080")
 
 	if err != nil {
 		t.Error(" pool.ReplaceOrDefaultAcceptor should not error")
