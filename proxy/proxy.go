@@ -48,7 +48,7 @@ func (p *Proxy) Start() {
 	p.Lock()
 
 	if p.started {
-		message := fmt.Sprintf("Proxy already started :%s", p.Identity())
+		message := fmt.Sprintf("Proxy already started :%s", p.identity())
 		logger.Error.Printf(message)
 		panic(message)
 	}
@@ -59,7 +59,7 @@ func (p *Proxy) Start() {
 	p.started = true
 	defer p.Unlock()
 
-	logger.Info.Printf("%s : Open", p.Identity())
+	logger.Info.Printf("%s : Open", p.identity())
 
 	select {
 	case <-p.leftCloseChannel:
@@ -71,8 +71,8 @@ func (p *Proxy) Start() {
 
 	p.ownedConnection.Close()
 
-	p.registry.UnRegisterConnection(p.Identity())
-	logger.Info.Printf("%s : Closed", p.Identity())
+	p.registry.UnRegisterConnection(p.identity())
+	logger.Info.Printf("%s : Closed", p.identity())
 }
 
 func (p *Proxy) SwapServerConnection(conn *net.TCPConn) {
@@ -86,7 +86,7 @@ func (p *Proxy) SwapServerConnection(conn *net.TCPConn) {
 	p.ownedConnection.Close()
 	p.ownedConnection = conn
 
-	p.registry.UpdateExistingConnection(p.connectionInfo.Identity(), conn.RemoteAddr().String())
+	p.registry.UpdateExistingConnection(p.identity(), conn.RemoteAddr().String())
 }
 
 func (p *Proxy) UpdateStatistics(direction Direction, amount uint64) {
@@ -98,6 +98,6 @@ func (p *Proxy) UpdateStatistics(direction Direction, amount uint64) {
 	}
 }
 
-func (p *Proxy) Identity() string {
+func (p *Proxy) identity() string {
 	return p.connectionInfo.Identity()
 }
