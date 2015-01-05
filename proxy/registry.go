@@ -3,6 +3,7 @@ package proxy
 import (
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type Registry struct {
@@ -12,8 +13,8 @@ type Registry struct {
 }
 
 type RegistryStatistics struct {
-	TotalNumberOfConnections   uint
-	CurrentNumberOfConnections uint
+	TotalNumberOfConnections   uint32
+	CurrentNumberOfConnections uint32
 }
 
 func NewRegistry() *Registry {
@@ -34,7 +35,7 @@ func (r *Registry) RegisterConnection(from, to string, proxy *Proxy) *InternalCo
 
 	r.m[info.Identity()] = info
 
-	r.statistics.TotalNumberOfConnections++
+	atomic.AddUint32(&r.statistics.TotalNumberOfConnections, 1)
 
 	return info
 }
@@ -91,6 +92,6 @@ func (r *Registry) GetStatistics() RegistryStatistics {
 
 	return RegistryStatistics{
 		TotalNumberOfConnections:   r.statistics.TotalNumberOfConnections,
-		CurrentNumberOfConnections: uint(len(r.m)),
+		CurrentNumberOfConnections: uint32(len(r.m)),
 	}
 }
