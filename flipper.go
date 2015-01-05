@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -23,8 +24,9 @@ func NewProxyFlipper(config *configuration.ConfigurationManager) *ProxyFlipper {
 	registry := proxy.NewRegistry()
 
 	return &ProxyFlipper{
-		pool:     acceptor.NewAcceptorPool(registry),
-		registry: registry,
+		pool:          acceptor.NewAcceptorPool(registry),
+		registry:      registry,
+		configuration: config,
 	}
 }
 
@@ -32,7 +34,7 @@ func (pf *ProxyFlipper) InitialiseRunningState(state *types.MasterDetailsCollect
 	logger.NoteWorthy.Printf("InitialiseRunningState : %s", util.String(state.Items()))
 
 	for _, md := range state.Items() {
-		go pf.ensureCorrectAcceptorPoolIsRunning(md.Name, md.ExternalPort, md.Ip, md.Port)
+		go pf.updateAcceptorPool(md.Name, md.ExternalPort, md.Ip, md.Port)
 	}
 }
 
@@ -49,7 +51,7 @@ func (pf *ProxyFlipper) Orchestrate(switchEvent types.MasterSwitchedEvent) {
 
 	// close existing acceptor with name
 	// spin up a new acceptor pool
-	pf.ensureCorrectAcceptorPoolIsRunning(switchEvent.Name, cluster.ExternalPort, switchEvent.NewMasterIp, switchEvent.NewMasterPort)
+	pf.updateAcceptorPool(switchEvent.Name, cluster.ExternalPort, switchEvent.NewMasterIp, switchEvent.NewMasterPort)
 
 	// swap out existing connection endpoint
 	// without dropping connections
@@ -76,9 +78,15 @@ func (pf *ProxyFlipper) Orchestrate(switchEvent types.MasterSwitchedEvent) {
 
 }
 
-func (pf *ProxyFlipper) ensureCorrectAcceptorPoolIsRunning(name string, externalport int, host string, port int) {
+func (pf *ProxyFlipper) updateAcceptorPool(name string, externalport int, host string, port int) {
 
-	localAddress := fmt.Sprintf("%s:%d", "localhost", externalport)
+	ip, err := externalIP()
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	localAddress := fmt.Sprintf("%s:%d", ip, externalport)
 	remoteAddress := fmt.Sprintf("%s:%d", host, port)
 
 	logger.Info.Printf("Proxying from %v to %v\n", localAddress, remoteAddress)
@@ -90,4 +98,41 @@ func (pf *ProxyFlipper) ensureCorrectAcceptorPoolIsRunning(name string, external
 	} else {
 		go acceptor.Start()
 	}
+}
+
+func externalIP() (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", err
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue // not an ipv4 address
+			}
+			return ip.String(), nil
+		}
+	}
+	return "", errors.New("are you connected to the network?")
 }
