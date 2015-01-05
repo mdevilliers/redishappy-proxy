@@ -57,7 +57,7 @@ func (p *Proxy) Start() {
 	go p.right.Open()
 
 	p.started = true
-	defer p.Unlock()
+	p.Unlock()
 
 	logger.Info.Printf("%s : Open", p.identity())
 
