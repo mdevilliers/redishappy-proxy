@@ -1,8 +1,10 @@
 package acceptor
 
 import (
+	"errors"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/mdevilliers/redishappy-proxy/proxy"
 	"github.com/mdevilliers/redishappy/services/logger"
@@ -22,6 +24,8 @@ type AcceptedConnection struct {
 	connection *net.TCPConn
 	err        error
 }
+
+var StopRequested = errors.New("Listener stopped via Stop() method.")
 
 func NewAcceptor(localAddress, remoteAddress string, registry *proxy.Registry) (*Acceptor, error) {
 
@@ -106,14 +110,15 @@ func (a *Acceptor) loop() {
 
 	for {
 
-		quit := false
-
 		select {
 		case accepted := <-a.acceptedConnections:
 
+			if accepted.err == StopRequested {
+				break
+			}
+
 			if accepted.err != nil {
 				logger.Error.Printf("Error on acceptor channel : %s", accepted.err)
-
 			} else {
 
 				// TODO : get this connection from a connection pool
@@ -126,18 +131,6 @@ func (a *Acceptor) loop() {
 				}
 
 			}
-
-		case <-a.quit:
-
-			a.listener.Close()
-
-			//flush the last message out
-			//maybe a race?
-			<-a.acceptedConnections
-			quit = true
-		}
-		if quit {
-			break
 		}
 	}
 }
@@ -145,7 +138,30 @@ func (a *Acceptor) loop() {
 func (a *Acceptor) acceptorLoop() {
 
 	for {
+
+		a.listener.SetDeadline(time.Now().Add(time.Second))
+
 		conn, err := a.listener.AcceptTCP()
+
+		select {
+		case <-a.quit:
+			a.acceptedConnections <- AcceptedConnection{connection: conn, err: StopRequested}
+			a.listener.Close()
+			break
+		default:
+			// do nothing as no request to stop made
+		}
+
+		if err != nil {
+			netErr, ok := err.(net.Error)
+
+			//If this is a timeout, then continue to wait for
+			//new connections
+			if ok && netErr.Timeout() && netErr.Temporary() {
+				continue
+			}
+		}
+
 		a.acceptedConnections <- AcceptedConnection{connection: conn, err: err}
 	}
 }

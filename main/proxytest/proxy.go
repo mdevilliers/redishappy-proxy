@@ -86,7 +86,7 @@ func main() {
 				if err != nil {
 					logger.Error.Printf("Remote connection failed: %s", err)
 				}
-
+				logger.Info.Printf("Swapping Connection : %s", util.StringPrettify(connection))
 				connection.SwapServerConnection(conn)
 			}
 
